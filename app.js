@@ -1,11 +1,11 @@
-var createError = require('http-errors');
+var initDatabases = require('./public/javascripts/DBs.js');
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var cors = require('cors');
 
 var app = express();
 
@@ -14,28 +14,59 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
 app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(bodyParser.json({
+    limit: '5mb'
+}));
+app.use(bodyParser.urlencoded({
+    limit: '5mb',
+    extended: true,
+    parameterLimit: 50
+}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use(cors());
+
+app.get('/', function (req, res, next) {
+    res.render('index', {
+        title: 'Performance Collector Unacloud'
+    });
+});
+
+var creator = require('./public/javascripts/Performance/Creators.js');
+var deleter = require('./public/javascripts/Performance/Deleters.js');
+var reader = require('./public/javascripts/Performance/Readers.js');
+
+initDatabases().then(dbs => {
+    console.log("DB Connected Succesfully");
+    let PerformanceDB = dbs.performance_collector;
+    global.PerformanceDB = PerformanceDB;
+    global.elasticSearch = dbs.urlElastic;
+}).catch(err => {
+    console.error('Failed to make database connection!');
+    console.error(err);
+});
+
+app.get('/readMetrics', reader.readMetrics);
+app.post('/createMetric', creator.createMetric);
+app.post('/deleteMetric', deleter.deleteMetric);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+app.use(function (req, res, next) {
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
 });
 
 // error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+app.use(function (err, req, res, next) {
+    // set locals, only providing error in development
+    res.locals.message = err.message;
+    res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+    // render the error page
+    res.status(err.status || 500);
+    res.render('error');
 });
 
 module.exports = app;
