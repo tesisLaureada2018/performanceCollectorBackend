@@ -117,6 +117,12 @@ initDatabases().then(dbs => {
                         "type": "date",
                         "format": "epoch_millis"
                     },
+                    "running_vms": {
+                        "type": "short"
+                    },
+                    "vms": {
+                        "type": "short"
+                    },
                 }
             }
         }

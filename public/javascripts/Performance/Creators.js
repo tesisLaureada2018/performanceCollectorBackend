@@ -60,7 +60,9 @@ exports.createMetric = function (req, res) {
         net_err_in : newMetric.net_io_counters.errin,
         net_err_out : newMetric.net_io_counters.errout,
         net_drop_in : newMetric.net_io_counters.dropin,
-        net_drop_out : newMetric.net_io_counters.dropout
+        net_drop_out : newMetric.net_io_counters.dropout,
+        running_vms : newMetric.running_vms,
+        vms : newMetric.vms
     };
     res.json(summary);
     axios.post(elasticSearch + "/summary/_doc/", summary).then(
