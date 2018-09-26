@@ -18,7 +18,7 @@ exports.createMetric = function (req, res) {
         res.json({ error: "DB Error" });
         return;
     }
-
+    newMetric.timestamp = (newMetric.timestamp+'').replace('.','');
     //To mongo: The document is saved as it came
     var collectionP = PerformanceDB.collection('MetricsCollection');
     collectionP.insertOne(newMetric, function (error, result) {
@@ -30,23 +30,23 @@ exports.createMetric = function (req, res) {
     let cpu = newMetric.cpu_details;
     cpu.timestamp = newMetric.timestamp;
     cpu.ip = newMetric.ip;
-    axios.post(elasticSearch + "/cpu/_doc/", cpu).then(
+    axios.post(elasticSearch + "/cpu/doc/", cpu).then(
         (res) => {
             console.log("Elastic cpu: "+ res.status);
         },
         (err) => { 
-            setTimeout(function(){ retryFailedRequest(elasticSearch + "/cpu/_doc/", cpu)}, 10000);
+            setTimeout(function(){ retryFailedRequest(elasticSearch + "/cpu/doc/", cpu)}, 10000);
         }
     );
     let memory = newMetric.ram;
     memory.timestamp = newMetric.timestamp;
     memory.ip = newMetric.ip;
-    axios.post(elasticSearch + "/memory/_doc/", memory).then(
+    axios.post(elasticSearch + "/memory/doc/", memory).then(
         (res) => {
             console.log("Elastic memory: "+ res.status);
         },
         (err) => { 
-            setTimeout(function(){ retryFailedRequest(elasticSearch + "/memory/_doc/", memory)}, 10000);
+            setTimeout(function(){ retryFailedRequest(elasticSearch + "/memory/doc/", memory)}, 10000);
         }
     );
     
@@ -65,13 +65,13 @@ exports.createMetric = function (req, res) {
         vms : newMetric.vms
     };
     res.json(summary);
-    axios.post(elasticSearch + "/summary/_doc/", summary).then(
+    axios.post(elasticSearch + "/summary/doc/", summary).then(
         (res) => {
             console.log("Elastic summary: "+ res.status);
         },
         (err) => { 
             console.log(err);
-            setTimeout(function(){ retryFailedRequest(elasticSearch + "/summary/_doc/", summary)}, 10000);
+            setTimeout(function(){ retryFailedRequest(elasticSearch + "/summary/doc/", summary)}, 10000);
         }
     );
 };
