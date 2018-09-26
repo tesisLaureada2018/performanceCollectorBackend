@@ -4,7 +4,7 @@ var path = require('path');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-
+var axios = require('axios');
 var cors = require('cors');
 
 var app = express();
@@ -42,6 +42,98 @@ initDatabases().then(dbs => {
     let PerformanceDB = dbs.performance_collector;
     global.PerformanceDB = PerformanceDB;
     global.elasticSearch = dbs.urlElastic;
+
+    const cpu = {
+        "settings": {
+            "number_of_shards": 1
+        },
+        "mappings": {
+            "_doc": {
+                "properties": {
+                    "timestamp": {
+                        "type": "date",
+                        "format": "epoch_millis"
+                    },
+                    "ip": { "type": "text" },
+                    "user": { "type": "float" },
+                    "system": { "type": "float" },
+                    "idle": { "type": "float" },
+                    "interrupt": { "type": "float" },
+                    "dcp": { "type": "float" },
+                },
+            }
+        }
+    }
+    const memory = {
+        "settings": {
+            "number_of_shards": 1
+        },
+        "mappings": {
+            "_doc": {
+                "properties": {
+                    "timestamp": {
+                        "type": "date",
+                        "format": "epoch_millis"
+                    },
+                    "ip": { "type": "text" },
+                    "total": { "type": "long" },
+                    "available": { "type": "long" },
+                    "percent": { "type": "float" },
+                    "used": { "type": "long" },
+                    "free": { "type": "long" },
+                },
+            }
+        }
+    }
+    const summary = {
+        "settings": {
+            "number_of_shards": 1
+        },
+        "mappings": {
+            "_doc": {
+                "properties": {
+                    "cpu_pct": {
+                        "type": "float"
+                    },
+                    "disk_pct": {
+                        "type": "float"
+                    },
+                    "ip": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "ignore_above": 256
+                            }
+                        }
+                    },
+                    "ram_pct": {
+                        "type": "float"
+                    },
+                    "swap_pct": {
+                        "type": "float"
+                    },
+                    "timestamp": {
+                        "type": "date",
+                        "format": "epoch_millis"
+                    },
+                }
+            }
+        }
+    }
+
+    axios.put(elasticSearch + "/summary", summary).then(
+        (res) => { console.log("Elastic summary: " + res.status); },
+        (err) => { }
+    );
+    axios.put(elasticSearch + "/memory", memory).then(
+        (res) => { console.log("Elastic memory: " + res.status); },
+        (err) => { }
+    );
+    axios.put(elasticSearch + "/cpu", cpu).then(
+        (res) => { console.log("Elastic cpu: " + res.status); },
+        (err) => { }
+    );
 }).catch(err => {
     console.error('Failed to make database connection!');
     console.error(err);
