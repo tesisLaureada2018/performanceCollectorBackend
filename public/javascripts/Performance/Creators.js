@@ -18,7 +18,6 @@ exports.createMetric = function (req, res) {
         res.json({ error: "DB Error" });
         return;
     }
-    newMetric.timestamp = (newMetric.timestamp+'').replace('.','');
     //To mongo: The document is saved as it came
     var collectionP = PerformanceDB.collection('MetricsCollection');
     collectionP.insertOne(newMetric, function (error, result) {

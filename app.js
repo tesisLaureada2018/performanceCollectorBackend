@@ -52,7 +52,7 @@ initDatabases().then(dbs => {
                 "properties": {
                     "timestamp": {
                         "type": "date",
-                        "format": "epoch_millis"
+                        "format": "strict_date_hour_minute_second"
                     },
                     "ip": { "type": "text" },
                     "user": { "type": "float" },
@@ -73,7 +73,7 @@ initDatabases().then(dbs => {
                 "properties": {
                     "timestamp": {
                         "type": "date",
-                        "format": "epoch_millis"
+                        "format": "strict_date_hour_minute_second"
                     },
                     "ip": { "type": "text" },
                     "total": { "type": "long" },
@@ -115,7 +115,7 @@ initDatabases().then(dbs => {
                     },
                     "timestamp": {
                         "type": "date",
-                        "format": "epoch_millis"
+                        "format": "strict_date_hour_minute_second"
                     },
                     "running_vms": {
                         "type": "short"
