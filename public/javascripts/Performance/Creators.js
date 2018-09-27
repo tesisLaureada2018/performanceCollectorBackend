@@ -1,16 +1,6 @@
 var axios = require('axios');
 var qs = require('qs');
-
-function retryFailedRequest(path, object) {
-    axios.post(path, object).then(
-        (res) => {
-            console.log("Elastic retry failed request: " + res.status);
-        },
-        (err) => { 
-            setTimeout(function(){ retryFailedRequest(path, object)}, 20000);
-        }
-    );   
-}
+var email = require('./EmailNotification.js');
 
 exports.createMetric = function (req, res) {
     let newMetric = qs.parse(req.body);
@@ -61,9 +51,10 @@ exports.createMetric = function (req, res) {
         net_drop_in : newMetric.net_io_counters.dropin,
         net_drop_out : newMetric.net_io_counters.dropout,
         running_vms : newMetric.running_vms,
-        vms : newMetric.vms
+        vms : newMetric.vms,
+        isVBoxAlive : newMetric.isVBoxAlive,
+        isUnacloudAlive : newMetric.isUnacloudAlive
     };
-    res.json(summary);
     axios.post(elasticSearch + "/summary/doc/", summary).then(
         (res) => {
             console.log("Elastic summary: "+ res.status);
@@ -73,4 +64,49 @@ exports.createMetric = function (req, res) {
             setTimeout(function(){ retryFailedRequest(elasticSearch + "/summary/doc/", summary)}, 10000);
         }
     );
+    res.json(summary);
+
+    if(newMetric.isVBoxAlive === 0) {
+        alert("Vbox is not alive for IP: " + newMetric.ip);
+    }
+    if(newMetric.isUnacloudAlive === 0) {
+        alert("Unacloud is not alive for IP: " + newMetric.ip);
+    }
+    if(!machines[newMetric.ip]){
+        machines[newMetric.ip] = new Date().getTime();
+    }
+    machines[newMetric.ip] = new Date().getTime();
 };
+
+function alert (message) {
+    email.sendEmail(message);
+}
+
+function retryFailedRequest(path, object) {
+    axios.post(path, object).then(
+        (res) => {
+            console.log("Elastic retry failed request: " + res.status);
+        },
+        (err) => { 
+            setTimeout(function(){ retryFailedRequest(path, object)}, 20000);
+        }
+    );   
+}
+
+let machines = {};
+//1 vez por minuto
+let frecuency = 1000*10;
+let timeAccepted = 1000*10;
+setTimeout(function(){ checkMachines() }, frecuency);
+function checkMachines() {
+    setTimeout(function(){ checkMachines() }, frecuency);
+    //console.log(machines);   
+    let keys = Object.keys(machines);
+    for(let i=0;i<keys.length; i++) {
+        let ip = keys[i];
+        if( (new Date().getTime()-timeAccepted) > machines[ip] ){
+            email.sendEmail("IP: "+ip+" has not responded in "+ timeAccepted/(1000*60) +" minutes");
+            delete machines[ip];
+        }
+    }
+}
