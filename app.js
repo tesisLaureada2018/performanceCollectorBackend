@@ -123,12 +123,6 @@ initDatabases().then(dbs => {
                     "vms": {
                         "type": "short"
                     },
-                    "isVBoxAlive": {
-                        "type": "short"
-                    },
-                    "isUnacloudAlive": {
-                        "type": "short"
-                    },
                 }
             }
         }
@@ -136,15 +130,15 @@ initDatabases().then(dbs => {
 
     axios.put(elasticSearch + "/summary", summary).then(
         (res) => { console.log("Elastic summary: " + res.status); },
-        (err) => {  }
+        (err) => { console.log(err); }
     );
     axios.put(elasticSearch + "/memory", memory).then(
         (res) => { console.log("Elastic memory: " + res.status); },
-        (err) => {  }
+        (err) => { console.log(err); }
     );
     axios.put(elasticSearch + "/cpu", cpu).then(
         (res) => { console.log("Elastic cpu: " + res.status); },
-        (err) => {  }
+        (err) => { console.log(err); }
     );
 }).catch(err => {
     console.error('Failed to make database connection!');
