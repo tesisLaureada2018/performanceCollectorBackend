@@ -86,7 +86,7 @@ function alert(message, ip) {
             }
             else{
                 test[ip] += 1;
-                if(test[ip] % 10 === 0){
+                if(test[ip] % 3 === 0){
                     email.sendEmail(message+ip);
                 }
             }
@@ -123,9 +123,8 @@ function retryFailedRequest(path, object) {
 }
 
 let machines = {};
-//1 vez por minuto
-let frecuency = 1000 * 10;
-let timeAccepted = 1000 * 10;
+let frecuency = 1000 * 60 * 10;
+let timeAccepted = 1000 * 60 * 10;
 setTimeout(function () { checkMachines() }, frecuency);
 function checkMachines() {
     setTimeout(function () { checkMachines() }, frecuency);

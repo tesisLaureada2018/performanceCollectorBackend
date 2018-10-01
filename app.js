@@ -160,6 +160,7 @@ initDatabases().then(dbs => {
 });
 
 app.get('/readMetrics', reader.readMetrics);
+app.get('/readMetrics', reader.readErrors);
 app.post('/createMetric', creator.createMetric);
 app.post('/deleteMetric', deleter.deleteMetric);
 
