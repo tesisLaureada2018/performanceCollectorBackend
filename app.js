@@ -123,10 +123,10 @@ initDatabases().then(dbs => {
                     "vms": {
                         "type": "short"
                     },
-                    "isVBoxAlive": {
+                    "virtualbox_status": {
                         "type": "short"
                     },
-                    "isUnacloudAlive": {
+                    "unacloud_status": {
                         "type": "short"
                     },
                 }
@@ -146,6 +146,14 @@ initDatabases().then(dbs => {
         (res) => { console.log("Elastic cpu: " + res.status); },
         (err) => {  }
     );
+    var collectionP = PerformanceDB.collection('ErrorsCollection');
+    let errors = {
+        unacloud : [],
+        virtualBox : []
+    };
+    collectionP.insertOne(errors, function (error, result) {
+        if (error) { console.log(error); res.json(error); }
+    });
 }).catch(err => {
     console.error('Failed to make database connection!');
     console.error(err);

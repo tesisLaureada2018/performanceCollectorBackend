@@ -21,10 +21,10 @@ exports.createMetric = function (req, res) {
     cpu.ip = newMetric.ip;
     axios.post(elasticSearch + "/cpu/doc/", cpu).then(
         (res) => {
-            console.log("Elastic cpu: "+ res.status);
+            console.log("Elastic cpu: " + res.status);
         },
-        (err) => { 
-            setTimeout(function(){ retryFailedRequest(elasticSearch + "/cpu/doc/", cpu)}, 10000);
+        (err) => {
+            setTimeout(function () { retryFailedRequest(elasticSearch + "/cpu/doc/", cpu) }, 10000);
         }
     );
     let memory = newMetric.ram;
@@ -32,54 +32,83 @@ exports.createMetric = function (req, res) {
     memory.ip = newMetric.ip;
     axios.post(elasticSearch + "/memory/doc/", memory).then(
         (res) => {
-            console.log("Elastic memory: "+ res.status);
+            console.log("Elastic memory: " + res.status);
         },
-        (err) => { 
-            setTimeout(function(){ retryFailedRequest(elasticSearch + "/memory/doc/", memory)}, 10000);
+        (err) => {
+            setTimeout(function () { retryFailedRequest(elasticSearch + "/memory/doc/", memory) }, 10000);
         }
     );
-    
+
     let summary = {
-        ip : newMetric.ip,
-        timestamp : newMetric.timestamp,
-        cpu_pct : newMetric.cpu,
-        ram_pct : newMetric.ram.percent,
-        swap_pct : newMetric.swap.percent,
-        disk_pct : newMetric.disk.percent,
-        net_err_in : newMetric.net_io_counters.errin,
-        net_err_out : newMetric.net_io_counters.errout,
-        net_drop_in : newMetric.net_io_counters.dropin,
-        net_drop_out : newMetric.net_io_counters.dropout,
-        running_vms : newMetric.running_vms,
-        vms : newMetric.vms,
-        isVBoxAlive : newMetric.isVBoxAlive,
-        isUnacloudAlive : newMetric.isUnacloudAlive
+        ip: newMetric.ip,
+        timestamp: newMetric.timestamp,
+        cpu_pct: newMetric.cpu,
+        ram_pct: newMetric.ram.percent,
+        swap_pct: newMetric.swap.percent,
+        disk_pct: newMetric.disk.percent,
+        net_err_in: newMetric.net_io_counters.errin,
+        net_err_out: newMetric.net_io_counters.errout,
+        net_drop_in: newMetric.net_io_counters.dropin,
+        net_drop_out: newMetric.net_io_counters.dropout,
+        running_vms: newMetric.running_vms,
+        vms: newMetric.vms,
+        virtualbox_status: newMetric.virtualbox_status,
+        unacloud_status: newMetric.unacloud_status
     };
     axios.post(elasticSearch + "/summary/doc/", summary).then(
         (res) => {
-            console.log("Elastic summary: "+ res.status);
+            console.log("Elastic summary: " + res.status);
         },
-        (err) => { 
+        (err) => {
             console.log(err);
-            setTimeout(function(){ retryFailedRequest(elasticSearch + "/summary/doc/", summary)}, 10000);
+            setTimeout(function () { retryFailedRequest(elasticSearch + "/summary/doc/", summary) }, 10000);
         }
     );
     res.json(summary);
 
-    if(newMetric.isVBoxAlive === 0) {
-        alert("Vbox is not alive for IP: " + newMetric.ip);
+    if (newMetric.virtualbox_status === 0) {
+        alert("VirtualBox is not responding for IP: ", newMetric.ip);
     }
-    if(newMetric.isUnacloudAlive === 0) {
-        alert("Unacloud is not alive for IP: " + newMetric.ip);
+    if (newMetric.unacloud_status === 0) {
+        alert("Unacloud is not responding for IP: ", newMetric.ip);
     }
-    if(!machines[newMetric.ip]){
-        machines[newMetric.ip] = new Date().getTime();
-    }
+
     machines[newMetric.ip] = new Date().getTime();
 };
 
-function alert (message) {
-    email.sendEmail(message);
+function alert(message, ip) {
+    var collectionP = PerformanceDB.collection('ErrorsCollection');
+    if (message.startsWith("Machine wont report metrics")) {
+        console.log("Machine wont report");
+        collectionP.find({}).snapshot().forEach(function (test) {
+            if(!test[ip]){
+                test[ip] = 1;
+            }
+            else{
+                test[ip] += 1;
+                if(test[ip] % 10 === 0){
+                    email.sendEmail(message+ip);
+                }
+            }
+            collectionP.save(test);
+        });
+    }
+    else if (message.startsWith("Unacloud is not responding")) {
+        console.log("Unacloud is not responding");
+        collectionP.find({}).snapshot().forEach(function (test) {
+            test.unacloud.push(ip);
+            collectionP.save(test);
+        });
+        email.sendEmail(message+ip);
+    }
+    else if (message.startsWith("VirtualBox is not responding")) {
+        console.log("VirtualBox is not responding");
+        collectionP.find({}).snapshot().forEach(function (test) {
+            test.virtualBox.push(ip);
+            collectionP.save(test);
+        });
+        email.sendEmail(message+ip);
+    }
 }
 
 function retryFailedRequest(path, object) {
@@ -87,26 +116,25 @@ function retryFailedRequest(path, object) {
         (res) => {
             console.log("Elastic retry failed request: " + res.status);
         },
-        (err) => { 
-            setTimeout(function(){ retryFailedRequest(path, object)}, 20000);
+        (err) => {
+            setTimeout(function () { retryFailedRequest(path, object) }, 20000);
         }
-    );   
+    );
 }
 
 let machines = {};
 //1 vez por minuto
-let frecuency = 1000*10;
-let timeAccepted = 1000*10;
-setTimeout(function(){ checkMachines() }, frecuency);
+let frecuency = 1000 * 10;
+let timeAccepted = 1000 * 10;
+setTimeout(function () { checkMachines() }, frecuency);
 function checkMachines() {
-    setTimeout(function(){ checkMachines() }, frecuency);
+    setTimeout(function () { checkMachines() }, frecuency);
     //console.log(machines);   
     let keys = Object.keys(machines);
-    for(let i=0;i<keys.length; i++) {
+    for (let i = 0; i < keys.length; i++) {
         let ip = keys[i];
-        if( (new Date().getTime()-timeAccepted) > machines[ip] ){
-            email.sendEmail("IP: "+ip+" has not responded in "+ timeAccepted/(1000*60) +" minutes");
-            delete machines[ip];
+        if ((new Date().getTime() - timeAccepted) > machines[ip]) {
+            alert("Machine wont report metrics: Machine has not responded in " + timeAccepted / (1000 * 60) + " minutes IP:", ip);
         }
     }
 }
