@@ -137,3 +137,13 @@ function checkMachines() {
         }
     }
 }
+let frecuencyDet = 1000 * 60 * 60 * 3;
+setTimeout(function () { sendDetails() });
+function sendDetails() {
+    setTimeout(function () { sendDetails() }, frecuencyDet);
+    var collection = PerformanceDB.collection('MetricsCollection');
+    collection.find({}).toArray(function (err, docs) {
+        if (err) console.log(err); //info about what went wrong
+        email.sendEmail("there are "+docs.length + " documents in DB");
+    });
+}
