@@ -138,9 +138,12 @@ function checkMachines() {
     }
 }
 let frecuencyDet = 1000 * 60 * 60 * 3;
-setTimeout(function () { sendDetails() });
+setTimeout(function () { sendDetails() }, 1000*10);
 function sendDetails() {
     setTimeout(function () { sendDetails() }, frecuencyDet);
+	if(!PerformanceDB){
+          return;
+        }	
     var collection = PerformanceDB.collection('MetricsCollection');
     collection.find({}).toArray(function (err, docs) {
         if (err) console.log(err); //info about what went wrong
