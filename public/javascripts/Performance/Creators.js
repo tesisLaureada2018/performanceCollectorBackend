@@ -87,7 +87,7 @@ function alert(message, ip) {
             else{
                 test[ip] += 1;
                 if(test[ip] % 3 === 0){
-                    email.sendEmail(message+ip);
+                    email.sendEmail(message+ip, 'Machine wont report');
                 }
             }
             collectionP.save(test);
@@ -99,7 +99,7 @@ function alert(message, ip) {
             test.unacloud.push(ip);
             collectionP.save(test);
         });
-        email.sendEmail(message+ip);
+        email.sendEmail(message+ip, 'Unacloud is not responding');
     }
     else if (message.startsWith("VirtualBox is not responding")) {
         console.log("VirtualBox is not responding");
@@ -107,7 +107,7 @@ function alert(message, ip) {
             test.virtualBox.push(ip);
             collectionP.save(test);
         });
-        email.sendEmail(message+ip);
+        email.sendEmail(message+ip, 'VirtualBox is not responding');
     }
 }
 
@@ -137,16 +137,17 @@ function checkMachines() {
         }
     }
 }
+// 3 hours
 let frecuencyDet = 1000 * 60 * 60 * 3;
 setTimeout(function () { sendDetails() }, 1000*10);
 function sendDetails() {
     setTimeout(function () { sendDetails() }, frecuencyDet);
 	if(!PerformanceDB){
-          return;
-        }	
+        return;
+    }	
     var collection = PerformanceDB.collection('MetricsCollection');
     collection.find({}).toArray(function (err, docs) {
         if (err) console.log(err); //info about what went wrong
-        email.sendEmail("there are "+docs.length + " documents in DB");
+        email.sendEmail("there are "+docs.length + " documents in DB", 'Report');
     });
 }

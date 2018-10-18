@@ -8,11 +8,11 @@ var transporter = nodemailer.createTransport({
   }
 });
 
-exports.sendEmail = function (message) {
+exports.sendEmail = function (message, subjectP) {
     var mailOptions = {
         from: 'unacloudemails@gmail.com',
         to: 'unacloudemails@gmail.com',
-        subject: 'Failure at unacloud environment',
+        subject: subjectP,
         text: message
       };
       
