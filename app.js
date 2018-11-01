@@ -148,6 +148,7 @@ initDatabases().then(dbs => {
     );
     var collectionP = PerformanceDB.collection('ErrorsCollection');
     let errors = {
+        name: "errors",
         unacloudIsNotResponding: 0,
         virtualBoxIsNotResponding: 0,
         diskIsFull: 0,
@@ -156,9 +157,14 @@ initDatabases().then(dbs => {
         noInternetConection: 0,
         machines : []
     };
-    collectionP.insertOne(errors, function (error, result) {
-        if (error) { console.log(error); res.json(error); }
+    collectionP.find({"name": "errors"}).toArray(function (err, docs) {
+        if (docs.length === 0) {
+            collectionP.insertOne(errors, function (error, result) {
+                if (error) { console.log(error); res.json(error); }
+            });
+        }
     });
+    
 }).catch(err => {
     console.error('Failed to make database connection!');
     console.error(err);
