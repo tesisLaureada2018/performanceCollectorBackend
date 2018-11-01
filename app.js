@@ -148,8 +148,13 @@ initDatabases().then(dbs => {
     );
     var collectionP = PerformanceDB.collection('ErrorsCollection');
     let errors = {
-        unacloud : [],
-        virtualBox : []
+        unacloudIsNotResponding: 0,
+        virtualBoxIsNotResponding: 0,
+        diskIsFull: 0,
+        busyNetwork: 0,
+        shutDown: 0,
+        noInternetConection: 0,
+        machines : []
     };
     collectionP.insertOne(errors, function (error, result) {
         if (error) { console.log(error); res.json(error); }
@@ -159,9 +164,20 @@ initDatabases().then(dbs => {
     console.error(err);
 });
 
+app.get('/readHardwareInfo', reader.readHardwareInfo);
 app.get('/readMetrics', reader.readMetrics);
 app.get('/readErrors', reader.readErrors);
+app.get('/readrecoveredData', reader.readRecoveredData);
+app.get('/readProcesses', reader.readProcesses);
+
+app.get('/readMachines', creator.readMachines);
+app.get('/avgRTT', creator.avgRTT);
+
+app.post('/hardwareInfo', creator.hardwareInfo);
 app.post('/createMetric', creator.createMetric);
+app.post('/recoveredData', creator.recoveredData);
+app.post('/processes', creator.processes);
+
 app.post('/deleteMetric', deleter.deleteMetric);
 
 // catch 404 and forward to error handler

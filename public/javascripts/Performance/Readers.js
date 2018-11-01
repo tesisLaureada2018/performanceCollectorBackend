@@ -29,3 +29,48 @@ exports.readErrors = function (req, res) {
         
     });
 };
+
+exports.readRecoveredData = function (req, res) {
+    const userId = req.params.userId;
+    if(!PerformanceDB){
+        res.json({error: "DB Error"});
+        return;
+    }
+    var collection = PerformanceDB.collection('recoveredDataCollection');
+    collection.find({}).toArray(function (err, docs) {
+        if (err) console.log(err); //info about what went wrong
+        //console.log(docs);
+        res.json(docs);
+        
+    });
+};
+
+exports.readProcesses = function (req, res) {
+    const userId = req.params.userId;
+    if(!PerformanceDB){
+        res.json({error: "DB Error"});
+        return;
+    }
+    var collection = PerformanceDB.collection('processesCollection');
+    collection.find({}).toArray(function (err, docs) {
+        if (err) console.log(err); //info about what went wrong
+        //console.log(docs);
+        res.json(docs);
+        
+    });
+};
+
+exports.readHardwareInfo = function (req, res) {
+    const userId = req.params.userId;
+    if(!PerformanceDB){
+        res.json({error: "DB Error"});
+        return;
+    }
+    var collection = PerformanceDB.collection('hardwareInfoCollection');
+    collection.find({}).toArray(function (err, docs) {
+        if (err) console.log(err); //info about what went wrong
+        //console.log(docs);
+        res.json(docs);
+        
+    });
+};

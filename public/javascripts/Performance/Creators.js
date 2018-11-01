@@ -2,6 +2,43 @@ var axios = require('axios');
 var qs = require('qs');
 var email = require('./EmailNotification.js');
 
+exports.hardwareInfo = function (req, res) {
+    let newMetric = qs.parse(req.body);
+    if (!PerformanceDB) {
+        res.json({ error: "DB Error" });
+        return;
+    }
+    var collectionP = PerformanceDB.collection('hardwareInfoCollection');
+    collectionP.insertOne(newMetric, function (error, result) {
+        if (error) { console.log(error); res.json(error); }
+        //if (result) { res.json("Saved"); }
+    });
+}
+exports.processes = function (req, res) {
+    let newMetric = qs.parse(req.body);
+    if (!PerformanceDB) {
+        res.json({ error: "DB Error" });
+        return;
+    }
+    var collectionP = PerformanceDB.collection('processesCollection');
+    collectionP.insertOne(newMetric, function (error, result) {
+        if (error) { console.log(error); res.json(error); }
+    });
+}
+exports.recoveredData = function (req, res) {
+    let newMetric = qs.parse(req.body);
+    if (!PerformanceDB) {
+        res.json({ error: "DB Error" });
+        return;
+    }
+    var collectionP = PerformanceDB.collection('recoveredDataCollection');
+    collectionP.insertOne(newMetric, function (error, result) {
+        if (error) { console.log(error); res.json(error); }
+        //if (result) { res.json("Saved"); }
+    });
+    alert("noInternetConection. noInternetConection for IP: ", newMetric.ip, newMetric.timeOffline);
+}
+
 exports.createMetric = function (req, res) {
     let newMetric = qs.parse(req.body);
     if (!PerformanceDB) {
@@ -46,6 +83,7 @@ exports.createMetric = function (req, res) {
         ram_pct: newMetric.ram.percent,
         swap_pct: newMetric.swap.percent,
         disk_pct: newMetric.disk.percent,
+        unacloudDisk_pct: newMetric.unaclouddisk.percent,
         net_err_in: newMetric.net_io_counters.errin,
         net_err_out: newMetric.net_io_counters.errout,
         net_drop_in: newMetric.net_io_counters.dropin,
@@ -66,49 +104,151 @@ exports.createMetric = function (req, res) {
     );
     res.json(summary);
 
-    if (newMetric.virtualbox_status === 0) {
-        alert("VirtualBox is not responding for IP: ", newMetric.ip);
+    if(!machines[newMetric.ip]){
+        machines[newMetric.ip] = {
+            lastDate : new Date().getTime(),
+            lastMetric : newMetric,
+
+            unacloudIsNotRespondingNotification: false,
+            virtualBoxIsNotRespondingNotification: false,
+            diskIsFullNotification: false,
+            busyNetworkNotification: false,
+            shutDownNotification: false,
+        }
     }
+    machines[newMetric.ip].lastDate = new Date().getTime();
+    machines[newMetric.ip].lastMetric = newMetric;
+
     if (newMetric.unacloud_status === 0) {
-        alert("Unacloud is not responding for IP: ", newMetric.ip);
+        alert("unacloudIsNotResponding. Unacloud is not responding for IP: ", newMetric.ip);
+    }
+    if(newMetric.unacloud_status === 1 
+       && machines[newMetric.ip].unacloudIsNotRespondingNotification ) {
+        alert("unacloudIsNowResponding. Unacloud is responding again for IP: ", newMetric.ip);
+        machines[newMetric.ip].unacloudIsNotRespondingNotification = false;
     }
 
-    machines[newMetric.ip] = new Date().getTime();
+    if (newMetric.virtualbox_status === 0) {
+        alert("virtualBoxIsNotResponding. VirtualBox is not responding for IP: ", newMetric.ip);
+    }
+    if (newMetric.virtualbox_status === 1
+        && machines[newMetric.ip].virtualBoxIsNotRespondingNotification ) {
+        alert("virtualBoxIsNowResponding. VirtualBox is now responding for IP: ", newMetric.ip);
+        machines[newMetric.ip].virtualBoxIsNotRespondingNotification = false;
+    }
+
+    if (newMetric.unaclouddisk.percent > 80 ) {
+        alert("diskIsFull. diskIsFull IP: ", newMetric.ip);
+    }
+    if (newMetric.unaclouddisk.percent < 80
+        && machines[newMetric.ip].diskIsFullNotification ) {
+        alert("diskHasSpace. diskHasSpace IP: ", newMetric.ip);
+        machines[newMetric.ip].diskIsFullNotification = false;
+    }
+
+    if (newMetric.rtt > (3*avgRTT) ) {
+        alert("busyNetwork. busyNetwork IP: ", newMetric.ip);
+    }
+    if (newMetric.rtt < (3*avgRTT)
+        && machines[newMetric.ip].busyNetworkNotification ) {
+        alert("emptyNetwork. emptyNetwork IP: ", newMetric.ip);
+        machines[newMetric.ip].busyNetworkNotification = false;
+    }
+    avgRTT = (newMetric.rtt+avgRTT*99)/100;
 };
 
-function alert(message, ip) {
+function alert(message, ip, timeOffline) {
     var collectionP = PerformanceDB.collection('ErrorsCollection');
-    if (message.startsWith("Machine wont report metrics")) {
-        console.log("Machine wont report");
-        collectionP.find({}).snapshot().forEach(function (test) {
-            if(!test[ip]){
-                test[ip] = 1;
+    collectionP.find({}).snapshot().forEach(function (test) {
+        if(!test.machines[ip]){
+            test.machines[ip] = {
+                unacloudIsNotResponding: 0,
+                virtualBoxIsNotResponding: 0,
+                diskIsFull: 0,
+                busyNetwork: 0,
+                shutDown: 0,
+                noInternetConection: 0,
+            };
+        }
+        if (message.startsWith("shutDown")) {
+            console.log("Machine wont report");
+            test.machines[ip].shutDown += 1;
+            test.shutDown += 1;
+            if(!machines[ip].shutDownNotification ) {
+                email.sendEmail(message+ip, 'Machine is not responding');
+                machines[ip].shutDownNotification = true;
             }
-            else{
-                test[ip] += 1;
-                if(test[ip] % 3 === 0){
-                    email.sendEmail(message+ip, 'Machine wont report');
-                }
+        }
+        if (message.startsWith("isOn")) {
+            console.log("Machine is reporting");
+            if(machines[ip].shutDownNotification ) {
+                email.sendEmail(message+ip, 'Machine is responding');
+                machines[ip].shutDownNotification = false;
             }
-            collectionP.save(test);
-        });
-    }
-    else if (message.startsWith("Unacloud is not responding")) {
-        console.log("Unacloud is not responding");
-        collectionP.find({}).snapshot().forEach(function (test) {
-            test.unacloud.push(ip);
-            collectionP.save(test);
-        });
-        email.sendEmail(message+ip, 'Unacloud is not responding');
-    }
-    else if (message.startsWith("VirtualBox is not responding")) {
-        console.log("VirtualBox is not responding");
-        collectionP.find({}).snapshot().forEach(function (test) {
-            test.virtualBox.push(ip);
-            collectionP.save(test);
-        });
-        email.sendEmail(message+ip, 'VirtualBox is not responding');
-    }
+        }
+
+        else if (message.startsWith("unacloudIsNotResponding")) {
+            console.log("Unacloud is not responding");
+            test.machines[ip].unacloudIsNotResponding += 1;
+            test.unacloudIsNotResponding += 1;
+            if(!machines[ip].unacloudIsNotRespondingNotification){
+                email.sendEmail(message+ip, 'Unacloud is not responding');
+                machines[ip].unacloudIsNotRespondingNotification = true;
+            }
+        }
+        else if (message.startsWith("unacloudIsNowResponding")) {
+            console.log("Unacloud is responding");
+            email.sendEmail(message+ip, 'Unacloud is now responding');
+        }
+
+        else if (message.startsWith("virtualBoxIsNotResponding")) {
+            test.machines[ip].virtualBoxIsNotResponding += 1;
+            test.virtualBoxIsNotResponding +=1;
+            if(!machines[ip].virtualBoxIsNotRespondingNotification){
+                email.sendEmail(message+ip, 'VirtualBox is not responding');
+                machines[ip].virtualBoxIsNotRespondingNotification = true;
+            }
+        }
+        else if (message.startsWith("virtualBoxIsNowResponding")) {
+            email.sendEmail(message+ip, 'VirtualBox is now responding');
+        }
+
+        else if (message.startsWith("diskIsFull")) {
+            test.machines[ip].diskIsFull += 1;
+            test.diskIsFull +=1;
+            if(!machines[ip].diskIsFullNotification){
+                email.sendEmail(message+ip, 'Disk is full');
+                machines[ip].diskIsFullNotification = true;
+            }
+        }
+        else if (message.startsWith("diskHasSpace")) {
+            email.sendEmail(message+ip, 'Disk has space');
+        }
+
+        else if (message.startsWith("busyNetwork")) {
+            test.machines[ip].busyNetwork += 1;
+            test.busyNetwork +=1;
+            if(!machines[ip].busyNetworkNotification){
+                email.sendEmail(message+ip, 'Busy network');
+                machines[ip].busyNetworkNotification=true;
+            }
+        }
+        else if (message.startsWith("emptyNetwork")) {
+            email.sendEmail(message+ip, 'Empty Network');
+        }
+        
+        else if (message.startsWith("noInternetConection")) {
+            console.log("noInternetConection");
+            test.machines[ip].noInternetConection += timeOffline;
+            test.noInternetConection += timeOffline;
+            test.machines[ip].shutDown -= timeOffline;
+            test.shutDown -= timeOffline;
+            email.sendEmail(message+ip, 'No internet conection');
+        }
+        
+        collectionP.save(test);
+    });
+    
 }
 
 function retryFailedRequest(path, object) {
@@ -122,9 +262,12 @@ function retryFailedRequest(path, object) {
     );
 }
 
+let avgRTT = 1;
 let machines = {};
-let frecuency = 1000 * 60 * 10;
-let timeAccepted = 1000 * 60 * 10;
+// 1 min
+let frecuency = 1000 * 60;
+// 5 min
+let timeAccepted = 1000 * 60 * 5;
 setTimeout(function () { checkMachines() }, frecuency);
 function checkMachines() {
     setTimeout(function () { checkMachines() }, frecuency);
@@ -132,8 +275,11 @@ function checkMachines() {
     let keys = Object.keys(machines);
     for (let i = 0; i < keys.length; i++) {
         let ip = keys[i];
-        if ((new Date().getTime() - timeAccepted) > machines[ip]) {
-            alert("Machine wont report metrics: Machine has not responded in " + timeAccepted / (1000 * 60) + " minutes IP:", ip);
+        if ((new Date().getTime() - timeAccepted) > machines[ip].lastDate ) {
+            alert("shutDown. Machine wont report metrics: Machine has not responded in " + timeAccepted / (1000 * 60) + " minutes IP:", ip);
+        }
+        else{
+            alert("isOn. Machine is responding", ip);
         }
     }
 }
@@ -151,3 +297,12 @@ function sendDetails() {
         email.sendEmail("there are "+docs.length + " documents in DB", 'Report');
     });
 }
+
+
+exports.readMachines = function (req, res) {
+    res.json(machines);
+};
+
+exports.avgRTT = function (req, res) {
+    res.json(avgRTT);
+};
