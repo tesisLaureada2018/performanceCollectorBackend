@@ -76,6 +76,7 @@ exports.createMetric = function (req, res) {
         }
     );
 
+    let unacloudDisk = newMetric.unaclouddisk ? newMetric.unaclouddisk.percent : -1;
     let summary = {
         ip: newMetric.ip,
         timestamp: newMetric.timestamp,
@@ -83,7 +84,7 @@ exports.createMetric = function (req, res) {
         ram_pct: newMetric.ram.percent,
         swap_pct: newMetric.swap.percent,
         disk_pct: newMetric.disk.percent,
-        unacloudDisk_pct: newMetric.unaclouddisk.percent,
+        unacloudDisk_pct: unacloudDisk,
         net_err_in: newMetric.net_io_counters.errin,
         net_err_out: newMetric.net_io_counters.errout,
         net_drop_in: newMetric.net_io_counters.dropin,
@@ -137,10 +138,10 @@ exports.createMetric = function (req, res) {
         machines[newMetric.ip].virtualBoxIsNotRespondingNotification = false;
     }
 
-    if (newMetric.unaclouddisk.percent > 80 ) {
+    if (newMetric.unaclouddisk && newMetric.unaclouddisk.percent > 80 ) {
         alert("diskIsFull. diskIsFull IP: ", newMetric.ip);
     }
-    if (newMetric.unaclouddisk.percent < 80
+    if (newMetric.unaclouddisk && newMetric.unaclouddisk.percent < 80
         && machines[newMetric.ip].diskIsFullNotification ) {
         alert("diskHasSpace. diskHasSpace IP: ", newMetric.ip);
         machines[newMetric.ip].diskIsFullNotification = false;
