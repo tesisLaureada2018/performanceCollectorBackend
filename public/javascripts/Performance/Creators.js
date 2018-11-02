@@ -76,7 +76,6 @@ exports.createMetric = function (req, res) {
         }
     );
 
-    let unacloudDisk = newMetric.unaclouddisk ? newMetric.unaclouddisk.percent : -1;
     let summary = {
         ip: newMetric.ip,
         timestamp: newMetric.timestamp,
@@ -84,7 +83,7 @@ exports.createMetric = function (req, res) {
         ram_pct: newMetric.ram.percent,
         swap_pct: newMetric.swap.percent,
         disk_pct: newMetric.disk.percent,
-        unacloudDisk_pct: unacloudDisk,
+        unacloudDisk_pct: newMetric.unacloud_disk.percent,
         net_err_in: newMetric.net_io_counters.errin,
         net_err_out: newMetric.net_io_counters.errout,
         net_drop_in: newMetric.net_io_counters.dropin,
@@ -138,10 +137,10 @@ exports.createMetric = function (req, res) {
         machines[newMetric.ip].virtualBoxIsNotRespondingNotification = false;
     }
 
-    if (newMetric.unaclouddisk && newMetric.unaclouddisk.percent > 80 ) {
+    if (newMetric.unacloud_disk.percent > 80 ) {
         alert("diskIsFull. diskIsFull IP: ", newMetric.ip);
     }
-    if (newMetric.unaclouddisk && newMetric.unaclouddisk.percent < 80
+    if (newMetric.unacloud_disk.percent < 80
         && machines[newMetric.ip].diskIsFullNotification ) {
         alert("diskHasSpace. diskHasSpace IP: ", newMetric.ip);
         machines[newMetric.ip].diskIsFullNotification = false;
@@ -156,6 +155,22 @@ exports.createMetric = function (req, res) {
         machines[newMetric.ip].busyNetworkNotification = false;
     }
     avgRTT = (newMetric.rtt+avgRTT*99)/100;
+
+    const net = {
+        ip: newMetric.ip,
+        timestamp: newMetric.timestamp,
+        rtt: newMetric.rtt,
+        avgRtt: avgRTT
+    }
+    axios.post(elasticSearch + "/network/doc/", net).then(
+        (res) => {
+            console.log("Elastic network: " + res.status);
+        },
+        (err) => {
+            console.log(err);
+            setTimeout(function () { retryFailedRequest(elasticSearch + "/network/doc/", net) }, 10000);
+        }
+    );
 };
 
 function alert(message, ip, timeOffline) {
@@ -172,79 +187,74 @@ function alert(message, ip, timeOffline) {
             };
         }
         if (message.startsWith("shutDown")) {
-            console.log("Machine wont report");
             test.machines[ip].shutDown += 1;
             test.shutDown += 1;
             if(!machines[ip].shutDownNotification ) {
-                email.sendEmail(message+ip, 'Machine is not responding');
+                email.sendEmail(message+ip, 'Fallo: Machine is not responding');
                 machines[ip].shutDownNotification = true;
             }
         }
         if (message.startsWith("isOn")) {
-            console.log("Machine is reporting");
             if(machines[ip].shutDownNotification ) {
-                email.sendEmail(message+ip, 'Machine is responding');
+                email.sendEmail(message+ip, 'Recuperacion: Machine is responding');
                 machines[ip].shutDownNotification = false;
             }
         }
 
         else if (message.startsWith("unacloudIsNotResponding")) {
-            console.log("Unacloud is not responding");
             test.machines[ip].unacloudIsNotResponding += 1;
             test.unacloudIsNotResponding += 1;
             if(!machines[ip].unacloudIsNotRespondingNotification){
-                email.sendEmail(message+ip, 'Unacloud is not responding');
+                email.sendEmail(message+ip, 'Fallo: Unacloud is not responding');
                 machines[ip].unacloudIsNotRespondingNotification = true;
             }
         }
         else if (message.startsWith("unacloudIsNowResponding")) {
-            console.log("Unacloud is responding");
-            email.sendEmail(message+ip, 'Unacloud is now responding');
+            email.sendEmail(message+ip, 'Recuperacion: Unacloud is now responding');
         }
 
         else if (message.startsWith("virtualBoxIsNotResponding")) {
             test.machines[ip].virtualBoxIsNotResponding += 1;
             test.virtualBoxIsNotResponding +=1;
             if(!machines[ip].virtualBoxIsNotRespondingNotification){
-                email.sendEmail(message+ip, 'VirtualBox is not responding');
+                email.sendEmail(message+ip, 'Fallo: VirtualBox is not responding');
                 machines[ip].virtualBoxIsNotRespondingNotification = true;
             }
         }
         else if (message.startsWith("virtualBoxIsNowResponding")) {
-            email.sendEmail(message+ip, 'VirtualBox is now responding');
+            email.sendEmail(message+ip, 'Recuperacion: VirtualBox is now responding');
         }
 
         else if (message.startsWith("diskIsFull")) {
             test.machines[ip].diskIsFull += 1;
             test.diskIsFull +=1;
             if(!machines[ip].diskIsFullNotification){
-                email.sendEmail(message+ip, 'Disk is full');
+                email.sendEmail(message+ip, 'Fallo: Disk is full');
                 machines[ip].diskIsFullNotification = true;
             }
         }
         else if (message.startsWith("diskHasSpace")) {
-            email.sendEmail(message+ip, 'Disk has space');
+            email.sendEmail(message+ip, 'Recuperacion: Disk has space');
         }
 
         else if (message.startsWith("busyNetwork")) {
             test.machines[ip].busyNetwork += 1;
             test.busyNetwork +=1;
             if(!machines[ip].busyNetworkNotification){
-                email.sendEmail(message+ip, 'Busy network');
+                email.sendEmail(message+ip, 'Fallo: Busy network');
                 machines[ip].busyNetworkNotification=true;
             }
         }
         else if (message.startsWith("emptyNetwork")) {
-            email.sendEmail(message+ip, 'Empty Network');
+            email.sendEmail(message+ip, 'Recuperacion: Empty Network');
         }
         
         else if (message.startsWith("noInternetConection")) {
-            console.log("noInternetConection");
             test.machines[ip].noInternetConection += timeOffline;
             test.noInternetConection += timeOffline;
             test.machines[ip].shutDown -= timeOffline;
             test.shutDown -= timeOffline;
-            email.sendEmail(message+ip, 'No internet conection');
+            email.sendEmail(message+ip, 'Recuperacion: Internet conection re stablished');
         }
         
         collectionP.save(test);
@@ -303,7 +313,30 @@ function sendDetails() {
 exports.readMachines = function (req, res) {
     res.json(machines);
 };
-
+exports.readMachineByIp = function (req, res) {
+    const ip = req.params.ip;
+    res.json(machines[ip]);
+}
+exports.availableSpaceMachineUnacloudDisk = function (req, res) {
+    const ip = req.params.ip;
+    res.json({ "availableSpace": machines[ip].unacloud_disk.free});
+}
+exports.ramPercentMachine = function (req, res) {
+    const ip = req.params.ip;
+    res.json({ "ram_pct": machines[ip].ram.percent});
+}
+exports.cpuPercentMachine = function (req, res) {
+    const ip = req.params.ip;
+    res.json({ "cpu_pct": machines[ip].cpu});
+}
+exports.virtualBoxStatusMachine = function (req, res) {
+    const ip = req.params.ip;
+    res.json({ "virtualBoxStatus": machines[ip].virtualbox_status});
+}
+exports.unacloudStatusMachine = function (req, res) {
+    const ip = req.params.ip;
+    res.json({ "unacloudStatus": machines[ip].unacloud_status});
+}
 exports.avgRTT = function (req, res) {
     res.json(avgRTT);
 };

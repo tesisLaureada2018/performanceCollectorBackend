@@ -85,6 +85,24 @@ initDatabases().then(dbs => {
             }
         }
     }
+    const rtt = {
+        "settings": {
+            "number_of_shards": 1
+        },
+        "mappings": {
+            "doc": {
+                "properties": {
+                    "timestamp": {
+                        "type": "date",
+                        "format": "strict_date_hour_minute_second"
+                    },
+                    "ip": { "type": "text" },
+                    "rtt": { "type": "long" },
+                    "avgRtt": { "type": "long" },
+                },
+            }
+        }
+    }
     const summary = {
         "settings": {
             "number_of_shards": 1
@@ -146,6 +164,10 @@ initDatabases().then(dbs => {
         (res) => { console.log("Elastic cpu: " + res.status); },
         (err) => {  }
     );
+    axios.put(elasticSearch + "/network", rtt).then(
+        (res) => { console.log("Elastic network: " + res.status); },
+        (err) => {  }
+    );
     var collectionP = PerformanceDB.collection('ErrorsCollection');
     let errors = {
         name: "errors",
@@ -177,6 +199,12 @@ app.get('/readrecoveredData', reader.readRecoveredData);
 app.get('/readProcesses', reader.readProcesses);
 
 app.get('/readMachines', creator.readMachines);
+app.get('/readMachineByIp/:ip', creator.readMachineByIp);
+app.get('/availableSpaceMachineUnacloudDisk/:ip', creator.availableSpaceMachineUnacloudDisk)
+app.get('/ramPercentMachine/:ip', creator.ramPercentMachine)
+app.get('/cpuPercentMachine/:ip', creator.cpuPercentMachine)
+app.get('/virtualBoxStatusMachine/:ip', creator.virtualBoxStatusMachine)
+app.get('/unacloudStatusMachine/:ip', creator.unacloudStatusMachine)
 app.get('/avgRTT', creator.avgRTT);
 
 app.post('/hardwareInfo', creator.hardwareInfo);
