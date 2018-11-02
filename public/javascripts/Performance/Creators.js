@@ -75,7 +75,7 @@ exports.createMetric = function (req, res) {
             setTimeout(function () { retryFailedRequest(elasticSearch + "/memory/doc/", memory) }, 10000);
         }
     );
-
+    let unacloudDisk = (newMetric.unacloud_disk? newMetric.unacloud_disk.percent: -1);
     let summary = {
         ip: newMetric.ip,
         timestamp: newMetric.timestamp,
@@ -83,7 +83,7 @@ exports.createMetric = function (req, res) {
         ram_pct: newMetric.ram.percent,
         swap_pct: newMetric.swap.percent,
         disk_pct: newMetric.disk.percent,
-        unacloudDisk_pct: newMetric.unacloud_disk.percent,
+        unacloudDisk_pct: unacloudDisk,
         net_err_in: newMetric.net_io_counters.errin,
         net_err_out: newMetric.net_io_counters.errout,
         net_drop_in: newMetric.net_io_counters.dropin,
@@ -137,40 +137,44 @@ exports.createMetric = function (req, res) {
         machines[newMetric.ip].virtualBoxIsNotRespondingNotification = false;
     }
 
-    if (newMetric.unacloud_disk.percent > 80 ) {
+    if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent > 80 ) {
         alert("diskIsFull. diskIsFull IP: ", newMetric.ip);
     }
-    if (newMetric.unacloud_disk.percent < 80
+    if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent < 80
         && machines[newMetric.ip].diskIsFullNotification ) {
         alert("diskHasSpace. diskHasSpace IP: ", newMetric.ip);
         machines[newMetric.ip].diskIsFullNotification = false;
     }
 
-    if (newMetric.rtt > (3*avgRTT) ) {
+    if (newMetric.rtt && newMetric.rtt > (3*avgRTT) ) {
         alert("busyNetwork. busyNetwork IP: ", newMetric.ip);
     }
-    if (newMetric.rtt < (3*avgRTT)
+    if (newMetric.rtt && newMetric.rtt < (3*avgRTT)
         && machines[newMetric.ip].busyNetworkNotification ) {
         alert("emptyNetwork. emptyNetwork IP: ", newMetric.ip);
         machines[newMetric.ip].busyNetworkNotification = false;
     }
-    avgRTT = (newMetric.rtt+avgRTT*99)/100;
 
-    const net = {
-        ip: newMetric.ip,
-        timestamp: newMetric.timestamp,
-        rtt: newMetric.rtt,
-        avgRtt: avgRTT
-    }
-    axios.post(elasticSearch + "/network/doc/", net).then(
-        (res) => {
-            console.log("Elastic network: " + res.status);
-        },
-        (err) => {
-            console.log(err);
-            setTimeout(function () { retryFailedRequest(elasticSearch + "/network/doc/", net) }, 10000);
+    if(newMetric.rtt){
+        avgRTT = (newMetric.rtt+avgRTT*99)/100;
+        const net = {
+            ip: newMetric.ip,
+            timestamp: newMetric.timestamp,
+            rtt: newMetric.rtt,
+            avgRtt: avgRTT
         }
-    );
+        axios.post(elasticSearch + "/network/doc/", net).then(
+            (res) => {
+                console.log("Elastic network: " + res.status);
+            },
+            (err) => {
+                console.log(err);
+                setTimeout(function () { retryFailedRequest(elasticSearch + "/network/doc/", net) }, 10000);
+            }
+        );
+    }
+
+    
 };
 
 function alert(message, ip, timeOffline) {
