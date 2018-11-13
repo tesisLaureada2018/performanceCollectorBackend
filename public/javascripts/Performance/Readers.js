@@ -7,7 +7,7 @@ exports.readMetrics = function (req, res) {
         return;
     }
     var collection = PerformanceDB.collection('MetricsCollection');
-    collection.find({}).toArray(function (err, docs) {
+    collection.find({}).limit(10000).toArray(function (err, docs) {
         if (err) console.log(err); //info about what went wrong
         //console.log(docs);
         res.json(docs);
@@ -37,7 +37,7 @@ exports.readRecoveredData = function (req, res) {
         return;
     }
     var collection = PerformanceDB.collection('recoveredDataCollection');
-    collection.find({}).toArray(function (err, docs) {
+    collection.find({}).limit(10000).toArray(function (err, docs) {
         if (err) console.log(err); //info about what went wrong
         //console.log(docs);
         res.json(docs);
@@ -52,7 +52,7 @@ exports.readProcesses = function (req, res) {
         return;
     }
     var collection = PerformanceDB.collection('processesCollection');
-    collection.find({}).toArray(function (err, docs) {
+    collection.find({}).limit(10000).toArray(function (err, docs) {
         if (err) console.log(err); //info about what went wrong
         //console.log(docs);
         res.json(docs);

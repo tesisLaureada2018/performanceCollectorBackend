@@ -177,7 +177,7 @@ initDatabases().then(dbs => {
         busyNetwork: 0,
         shutDown: 0,
         noInternetConection: 0,
-        machines : []
+        machines : {}
     };
     collectionP.find({"name": "errors"}).toArray(function (err, docs) {
         if (docs.length === 0) {

@@ -11,7 +11,7 @@ exports.hardwareInfo = function (req, res) {
     var collectionP = PerformanceDB.collection('hardwareInfoCollection');
     collectionP.insertOne(newMetric, function (error, result) {
         if (error) { console.log(error); res.json(error); }
-        //if (result) { res.json("Saved"); }
+        if (result) { res.json("Saved"); }
     });
 }
 exports.processes = function (req, res) {
@@ -23,6 +23,7 @@ exports.processes = function (req, res) {
     var collectionP = PerformanceDB.collection('processesCollection');
     collectionP.insertOne(newMetric, function (error, result) {
         if (error) { console.log(error); res.json(error); }
+        if (result) { res.json("Saved"); }
     });
 }
 exports.recoveredData = function (req, res) {
@@ -34,7 +35,7 @@ exports.recoveredData = function (req, res) {
     var collectionP = PerformanceDB.collection('recoveredDataCollection');
     collectionP.insertOne(newMetric, function (error, result) {
         if (error) { console.log(error); res.json(error); }
-        //if (result) { res.json("Saved"); }
+        if (result) { res.json("Saved"); }
     });
     alert("noInternetConection. noInternetConection for IP: ", newMetric.ip, newMetric.timeOffline);
 }
@@ -49,7 +50,7 @@ exports.createMetric = function (req, res) {
     var collectionP = PerformanceDB.collection('MetricsCollection');
     collectionP.insertOne(newMetric, function (error, result) {
         if (error) { console.log(error); res.json(error); }
-        //if (result) { res.json("Saved"); }
+        if (result) { console.log("Saved"); }
     });
 
     //to elasticSearch
@@ -190,6 +191,7 @@ function alert(message, ip, timeOffline) {
                 noInternetConection: 0,
             };
         }
+        
         if (message.startsWith("shutDown")) {
             test.machines[ip].shutDown += 1;
             test.shutDown += 1;
@@ -198,13 +200,12 @@ function alert(message, ip, timeOffline) {
                 machines[ip].shutDownNotification = true;
             }
         }
-        if (message.startsWith("isOn")) {
+        else if (message.startsWith("isOn")) {
             if(machines[ip].shutDownNotification ) {
                 email.sendEmail(message+ip, 'Recuperacion: Machine is responding');
                 machines[ip].shutDownNotification = false;
             }
         }
-
         else if (message.startsWith("unacloudIsNotResponding")) {
             test.machines[ip].unacloudIsNotResponding += 1;
             test.unacloudIsNotResponding += 1;
@@ -256,8 +257,8 @@ function alert(message, ip, timeOffline) {
         else if (message.startsWith("noInternetConection")) {
             test.machines[ip].noInternetConection += timeOffline;
             test.noInternetConection += timeOffline;
-            test.machines[ip].shutDown -= timeOffline;
-            test.shutDown -= timeOffline;
+            /*test.machines[ip].shutDown -= timeOffline;
+            test.shutDown -= timeOffline;*/
             email.sendEmail(message+ip, 'Recuperacion: Internet conection re stablished');
         }
         
