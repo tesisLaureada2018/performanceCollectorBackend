@@ -37,7 +37,7 @@ exports.recoveredData = function (req, res) {
         if (error) { console.log(error); res.json(error); }
         if (result) { res.json("Saved"); }
     });
-    alert("noInternetConection. noInternetConection for IP: ", newMetric.ip, newMetric.timeOffline);
+    alert("noInternetConection. noInternetConection for IP: ", newMetric.ip, newMetric.timestamp, newMetric.timeOffline);
 }
 
 exports.createMetric = function (req, res) {
@@ -121,38 +121,38 @@ exports.createMetric = function (req, res) {
     machines[newMetric.ip].lastMetric = newMetric;
 
     if (newMetric.unacloud_status === 0) {
-        alert("unacloudIsNotResponding. Unacloud is not responding for IP: ", newMetric.ip);
+        alert("unacloudIsNotResponding. Unacloud is not responding for IP: ", newMetric.ip, newMetric.timestamp);
     }
     if(newMetric.unacloud_status === 1 
        && machines[newMetric.ip].unacloudIsNotRespondingNotification ) {
-        alert("unacloudIsNowResponding. Unacloud is responding again for IP: ", newMetric.ip);
+        alert("unacloudIsNowResponding. Unacloud is responding again for IP: ", newMetric.ip, newMetric.timestamp);
         machines[newMetric.ip].unacloudIsNotRespondingNotification = false;
     }
 
     if (newMetric.virtualbox_status === 0) {
-        alert("virtualBoxIsNotResponding. VirtualBox is not responding for IP: ", newMetric.ip);
+        alert("virtualBoxIsNotResponding. VirtualBox is not responding for IP: ", newMetric.ip, newMetric.timestamp);
     }
     if (newMetric.virtualbox_status === 1
         && machines[newMetric.ip].virtualBoxIsNotRespondingNotification ) {
-        alert("virtualBoxIsNowResponding. VirtualBox is now responding for IP: ", newMetric.ip);
+        alert("virtualBoxIsNowResponding. VirtualBox is now responding for IP: ", newMetric.ip, newMetric.timestamp);
         machines[newMetric.ip].virtualBoxIsNotRespondingNotification = false;
     }
 
     if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent > 80 ) {
-        alert("diskIsFull. diskIsFull IP: ", newMetric.ip);
+        alert("diskIsFull. diskIsFull IP: ", newMetric.ip, newMetric.timestamp);
     }
     if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent < 80
         && machines[newMetric.ip].diskIsFullNotification ) {
-        alert("diskHasSpace. diskHasSpace IP: ", newMetric.ip);
+        alert("diskHasSpace. diskHasSpace IP: ", newMetric.ip, newMetric.timestamp);
         machines[newMetric.ip].diskIsFullNotification = false;
     }
 
     if (newMetric.rtt && newMetric.rtt > (3*avgRTT) ) {
-        alert("busyNetwork. busyNetwork IP: ", newMetric.ip);
+        alert("busyNetwork. busyNetwork IP: ", newMetric.ip, newMetric.timestamp);
     }
     if (newMetric.rtt && newMetric.rtt < (3*avgRTT)
         && machines[newMetric.ip].busyNetworkNotification ) {
-        alert("emptyNetwork. emptyNetwork IP: ", newMetric.ip);
+        alert("emptyNetwork. emptyNetwork IP: ", newMetric.ip, newMetric.timestamp);
         machines[newMetric.ip].busyNetworkNotification = false;
     }
 
@@ -178,22 +178,23 @@ exports.createMetric = function (req, res) {
     
 };
 
-function alert(message, ip, timeOffline) {
+function alert(message, ip, timestamp, timeOffline) {
     var collectionP = PerformanceDB.collection('ErrorsCollection');
     collectionP.find({}).snapshot().forEach(function (test) {
         if(!test.machines[ip]){
             test.machines[ip] = {
-                unacloudIsNotResponding: 0,
-                virtualBoxIsNotResponding: 0,
-                diskIsFull: 0,
-                busyNetwork: 0,
-                shutDown: 0,
-                noInternetConection: 0,
+                unacloudIsNotResponding: {"count":0, "hour":[]},
+                virtualBoxIsNotResponding: {"count":0, "hour":[]},
+                diskIsFull: {"count":0, "hour":[]},
+                busyNetwork: {"count":0, "hour":[]},
+                shutDown: {"count":0, "hour":[]},
+                noInternetConection: {"count":0, "hour":[]},
             };
         }
         
         if (message.startsWith("shutDown")) {
-            test.machines[ip].shutDown += 1;
+            test.machines[ip].shutDown["count"] += 1;
+            test.machines[ip].shutDown.hour.push(timestamp);
             test.shutDown += 1;
             if(!machines[ip].shutDownNotification ) {
                 email.sendEmail(message+ip, 'Fallo: Machine is not responding');
@@ -207,7 +208,8 @@ function alert(message, ip, timeOffline) {
             }
         }
         else if (message.startsWith("unacloudIsNotResponding")) {
-            test.machines[ip].unacloudIsNotResponding += 1;
+            test.machines[ip].unacloudIsNotResponding["count"] += 1;
+            test.machines[ip].unacloudIsNotResponding.hour.push(timestamp);
             test.unacloudIsNotResponding += 1;
             if(!machines[ip].unacloudIsNotRespondingNotification){
                 email.sendEmail(message+ip, 'Fallo: Unacloud is not responding');
@@ -219,7 +221,8 @@ function alert(message, ip, timeOffline) {
         }
 
         else if (message.startsWith("virtualBoxIsNotResponding")) {
-            test.machines[ip].virtualBoxIsNotResponding += 1;
+            test.machines[ip].virtualBoxIsNotResponding["count"] += 1;
+            test.machines[ip].virtualBoxIsNotResponding.hour.push(timestamp);
             test.virtualBoxIsNotResponding +=1;
             if(!machines[ip].virtualBoxIsNotRespondingNotification){
                 email.sendEmail(message+ip, 'Fallo: VirtualBox is not responding');
@@ -231,7 +234,8 @@ function alert(message, ip, timeOffline) {
         }
 
         else if (message.startsWith("diskIsFull")) {
-            test.machines[ip].diskIsFull += 1;
+            test.machines[ip].diskIsFull["count"] += 1;
+            test.machines[ip].diskIsFull.hour.push(timestamp);
             test.diskIsFull +=1;
             if(!machines[ip].diskIsFullNotification){
                 email.sendEmail(message+ip, 'Fallo: Disk is full');
@@ -243,7 +247,8 @@ function alert(message, ip, timeOffline) {
         }
 
         else if (message.startsWith("busyNetwork")) {
-            test.machines[ip].busyNetwork += 1;
+            test.machines[ip].busyNetwork["count"] += 1;
+            test.machines[ip].busyNetwork.hour.push(timestamp);
             test.busyNetwork +=1;
             if(!machines[ip].busyNetworkNotification){
                 email.sendEmail(message+ip, 'Fallo: Busy network');
@@ -255,7 +260,8 @@ function alert(message, ip, timeOffline) {
         }
         
         else if (message.startsWith("noInternetConection")) {
-            test.machines[ip].noInternetConection += timeOffline;
+            test.machines[ip].noInternetConection["count"] += 1;
+            test.machines[ip].noInternetConection.hour.push(timestamp);
             test.noInternetConection += timeOffline;
             /*test.machines[ip].shutDown -= timeOffline;
             test.shutDown -= timeOffline;*/
@@ -291,11 +297,20 @@ function checkMachines() {
     let keys = Object.keys(machines);
     for (let i = 0; i < keys.length; i++) {
         let ip = keys[i];
-        if ((new Date().getTime() - timeAccepted) > machines[ip].lastDate ) {
-            alert("shutDown. Machine wont report metrics: Machine has not responded in " + timeAccepted / (1000 * 60) + " minutes IP:", ip);
+        let date = new Date();
+        let timestamp  = [
+            (d.getMonth()<10? '0'+d.getMonth(): d.getMonth())+1,
+            (d.getDate()<10? '0'+d.getDate(): d.getDate()),
+            d.getFullYear()].join('-')
+            +'T'+
+           [(d.getHours()<10? '0'+d.getHours(): d.getHours()),
+            (d.getMinutes()<10? '0'+d.getMinutes(): d.getMinutes()),
+            (d.getSeconds()<10? '0'+d.getSeconds(): d.getSeconds())].join(':');
+        if ((date.getTime() - timeAccepted) > machines[ip].lastDate ) {
+            alert("shutDown. Machine wont report metrics: Machine has not responded in " + timeAccepted / (1000 * 60) + " minutes IP:", ip, timestamp);
         }
         else{
-            alert("isOn. Machine is responding", ip);
+            alert("isOn. Machine is responding", ip, timestamp);
         }
     }
 }
