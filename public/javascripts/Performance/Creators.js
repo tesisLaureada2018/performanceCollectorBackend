@@ -138,7 +138,7 @@ exports.createMetric = function (req, res) {
         machines[newMetric.ip].virtualBoxIsNotRespondingNotification = false;
     }
 
-    if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent > 80 ) {
+    if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent >= 80 ) {
         alert("diskIsFull. diskIsFull IP: ", newMetric.ip, newMetric.timestamp);
     }
     if (newMetric.unacloud_disk && newMetric.unacloud_disk.percent < 80
@@ -147,7 +147,7 @@ exports.createMetric = function (req, res) {
         machines[newMetric.ip].diskIsFullNotification = false;
     }
 
-    if (newMetric.rtt && newMetric.rtt > (3*avgRTT) ) {
+    if (newMetric.rtt && newMetric.rtt >= (3*avgRTT) ) {
         alert("busyNetwork. busyNetwork IP: ", newMetric.ip, newMetric.timestamp);
     }
     if (newMetric.rtt && newMetric.rtt < (3*avgRTT)
@@ -179,10 +179,11 @@ exports.createMetric = function (req, res) {
 };
 
 function alert(message, ip, timestamp, timeOffline) {
+    let ipM = ip.replace(/\./g,'_');
     var collectionP = PerformanceDB.collection('ErrorsCollection');
     collectionP.find({}).snapshot().forEach(function (test) {
-        if(!test.machines[ip]){
-            test.machines[ip] = {
+        if(!test.machines[ipM]){
+            test.machines[ipM] = {
                 unacloudIsNotResponding: {"count":0, "hour":[]},
                 virtualBoxIsNotResponding: {"count":0, "hour":[]},
                 diskIsFull: {"count":0, "hour":[]},
@@ -193,10 +194,10 @@ function alert(message, ip, timestamp, timeOffline) {
         }
         
         if (message.startsWith("shutDown")) {
-            test.machines[ip].shutDown["count"] += 1;
-            test.machines[ip].shutDown.hour.push(timestamp);
+            test.machines[ipM].shutDown["count"] += 1;
             test.shutDown += 1;
             if(!machines[ip].shutDownNotification ) {
+                test.machines[ipM].shutDown.hour.push(timestamp);
                 email.sendEmail(message+ip, 'Fallo: Machine is not responding');
                 machines[ip].shutDownNotification = true;
             }
@@ -208,10 +209,10 @@ function alert(message, ip, timestamp, timeOffline) {
             }
         }
         else if (message.startsWith("unacloudIsNotResponding")) {
-            test.machines[ip].unacloudIsNotResponding["count"] += 1;
-            test.machines[ip].unacloudIsNotResponding.hour.push(timestamp);
+            test.machines[ipM].unacloudIsNotResponding["count"] += 1;
             test.unacloudIsNotResponding += 1;
             if(!machines[ip].unacloudIsNotRespondingNotification){
+                test.machines[ipM].unacloudIsNotResponding.hour.push(timestamp);
                 email.sendEmail(message+ip, 'Fallo: Unacloud is not responding');
                 machines[ip].unacloudIsNotRespondingNotification = true;
             }
@@ -221,10 +222,10 @@ function alert(message, ip, timestamp, timeOffline) {
         }
 
         else if (message.startsWith("virtualBoxIsNotResponding")) {
-            test.machines[ip].virtualBoxIsNotResponding["count"] += 1;
-            test.machines[ip].virtualBoxIsNotResponding.hour.push(timestamp);
+            test.machines[ipM].virtualBoxIsNotResponding["count"] += 1;
             test.virtualBoxIsNotResponding +=1;
             if(!machines[ip].virtualBoxIsNotRespondingNotification){
+                test.machines[ipM].virtualBoxIsNotResponding.hour.push(timestamp);
                 email.sendEmail(message+ip, 'Fallo: VirtualBox is not responding');
                 machines[ip].virtualBoxIsNotRespondingNotification = true;
             }
@@ -234,10 +235,10 @@ function alert(message, ip, timestamp, timeOffline) {
         }
 
         else if (message.startsWith("diskIsFull")) {
-            test.machines[ip].diskIsFull["count"] += 1;
-            test.machines[ip].diskIsFull.hour.push(timestamp);
+            test.machines[ipM].diskIsFull["count"] += 1;
             test.diskIsFull +=1;
             if(!machines[ip].diskIsFullNotification){
+                test.machines[ipM].diskIsFull.hour.push(timestamp);
                 email.sendEmail(message+ip, 'Fallo: Disk is full');
                 machines[ip].diskIsFullNotification = true;
             }
@@ -247,10 +248,10 @@ function alert(message, ip, timestamp, timeOffline) {
         }
 
         else if (message.startsWith("busyNetwork")) {
-            test.machines[ip].busyNetwork["count"] += 1;
-            test.machines[ip].busyNetwork.hour.push(timestamp);
+            test.machines[ipM].busyNetwork["count"] += 1;
             test.busyNetwork +=1;
             if(!machines[ip].busyNetworkNotification){
+                test.machines[ipM].busyNetwork.hour.push(timestamp);
                 email.sendEmail(message+ip, 'Fallo: Busy network');
                 machines[ip].busyNetworkNotification=true;
             }
@@ -260,11 +261,9 @@ function alert(message, ip, timestamp, timeOffline) {
         }
         
         else if (message.startsWith("noInternetConection")) {
-            test.machines[ip].noInternetConection["count"] += 1;
-            test.machines[ip].noInternetConection.hour.push(timestamp);
+            test.machines[ipM].noInternetConection["count"] += 1;
+            test.machines[ipM].noInternetConection.hour.push(timestamp);
             test.noInternetConection += timeOffline;
-            /*test.machines[ip].shutDown -= timeOffline;
-            test.shutDown -= timeOffline;*/
             email.sendEmail(message+ip, 'Recuperacion: Internet conection re stablished');
         }
         
@@ -297,7 +296,7 @@ function checkMachines() {
     let keys = Object.keys(machines);
     for (let i = 0; i < keys.length; i++) {
         let ip = keys[i];
-        let date = new Date();
+        let d = new Date();
         let timestamp  = [
             (d.getMonth()<10? '0'+d.getMonth(): d.getMonth())+1,
             (d.getDate()<10? '0'+d.getDate(): d.getDate()),
@@ -306,7 +305,7 @@ function checkMachines() {
            [(d.getHours()<10? '0'+d.getHours(): d.getHours()),
             (d.getMinutes()<10? '0'+d.getMinutes(): d.getMinutes()),
             (d.getSeconds()<10? '0'+d.getSeconds(): d.getSeconds())].join(':');
-        if ((date.getTime() - timeAccepted) > machines[ip].lastDate ) {
+        if ((d.getTime() - timeAccepted) > machines[ip].lastDate ) {
             alert("shutDown. Machine wont report metrics: Machine has not responded in " + timeAccepted / (1000 * 60) + " minutes IP:", ip, timestamp);
         }
         else{
