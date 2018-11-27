@@ -36,6 +36,7 @@ app.get('/', function (req, res, next) {
 var creator = require('./public/javascripts/Performance/Creators.js');
 var deleter = require('./public/javascripts/Performance/Deleters.js');
 var reader = require('./public/javascripts/Performance/Readers.js');
+var updater = require('./public/javascripts/Performance/Updaters.js');
 
 initDatabases().then(dbs => {
     console.log("DB Connected Succesfully");
@@ -191,6 +192,8 @@ initDatabases().then(dbs => {
     console.error('Failed to make database connection!');
     console.error(err);
 });
+
+app.post('/shrinkDb', updater.shrink);
 
 app.get('/readHardwareInfo', reader.readHardwareInfo);
 app.get('/readMetrics', reader.readMetrics);
