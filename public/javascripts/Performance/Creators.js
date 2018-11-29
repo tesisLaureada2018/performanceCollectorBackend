@@ -325,7 +325,7 @@ function checkMachines() {
 
 function calculateRisk(machine) {
     //machine is not a valid object
-    if (!machine.unacloud_status){
+    if (!machine.ip){
         return -1;
     }
     if (machine.unacloud_status === 0 || machine.virtualBoxStatus === 0) {
