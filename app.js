@@ -200,10 +200,6 @@ initDatabases().then(dbs => {
         (res) => { console.log("Elastic cpu: " + res.status); },
         (err) => {  }
     );
-    axios.put(elasticSearch + "/network", rtt).then(
-        (res) => { console.log("Elastic network: " + res.status); },
-        (err) => {  }
-    );
     axios.put(elasticSearch + "/risk", risk).then(
         (res) => { console.log("Elastic risk: " + res.status); },
         (err) => {  }
@@ -233,6 +229,7 @@ initDatabases().then(dbs => {
 });
 
 app.post('/shrinkDb', updater.shrink);
+app.post('/deleteInDb', updater.deleteTimeStamp);
 
 app.get('/readHardwareInfo', reader.readHardwareInfo);
 app.get('/readMetrics', reader.readMetrics);
