@@ -99,7 +99,7 @@ exports.createMetric = function (req, res) {
         virtualbox_status: newMetric.virtualbox_status,
         unacloud_status: newMetric.unacloud_status,
         rtt: newMetric.rtt,
-        avgRtt : avgRTT
+        avgRTT : avgRTT
     };
     axios.post(elasticSearch + "/summary/doc/", summary).then(
         (res) => {
