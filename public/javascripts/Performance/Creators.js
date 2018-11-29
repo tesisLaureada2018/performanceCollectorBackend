@@ -50,7 +50,9 @@ exports.createMetric = function (req, res) {
     var collectionP = PerformanceDB.collection('MetricsCollection');
     collectionP.insertOne(newMetric, function (error, result) {
         if (error) { console.log(error); res.json(error); }
-        if (result) { console.log("Saved"); }
+        if (result) { 
+            //console.log("Saved"); 
+        }
     });
 
     //to elasticSearch
@@ -59,7 +61,7 @@ exports.createMetric = function (req, res) {
     cpu.ip = newMetric.ip;
     axios.post(elasticSearch + "/cpu/doc/", cpu).then(
         (res) => {
-            console.log("Elastic cpu: " + res.status);
+            //console.log("Elastic cpu: " + res.status);
         },
         (err) => {
             setTimeout(function () { retryFailedRequest(elasticSearch + "/cpu/doc/", cpu) }, 10000);
@@ -70,7 +72,7 @@ exports.createMetric = function (req, res) {
     memory.ip = newMetric.ip;
     axios.post(elasticSearch + "/memory/doc/", memory).then(
         (res) => {
-            console.log("Elastic memory: " + res.status);
+            //console.log("Elastic memory: " + res.status);
         },
         (err) => {
             setTimeout(function () { retryFailedRequest(elasticSearch + "/memory/doc/", memory) }, 10000);
@@ -96,14 +98,15 @@ exports.createMetric = function (req, res) {
         vms: newMetric.vms,
         virtualbox_status: newMetric.virtualbox_status,
         unacloud_status: newMetric.unacloud_status,
-        avgRTT : avgRTT
+        rtt: newMetric.rtt,
+        avgRtt : avgRTT
     };
     axios.post(elasticSearch + "/summary/doc/", summary).then(
         (res) => {
-            console.log("Elastic summary: " + res.status);
+            //console.log("Elastic summary: " + res.status);
         },
         (err) => {
-            console.log(err);
+            //console.log(err);
             setTimeout(function () { retryFailedRequest(elasticSearch + "/summary/doc/", summary) }, 10000);
         }
     );
@@ -312,7 +315,7 @@ function checkMachines() {
             };
             axios.post(elasticSearch + "/risk/doc/", riskObject).then(
                 (res) => {
-                    console.log("Elastic risk: " + res.status);
+                    //console.log("Elastic risk: " + res.status);
                 },
                 (err) => {
                     console.log(err);
