@@ -86,24 +86,6 @@ initDatabases().then(dbs => {
             }
         }
     }
-    const rtt = {
-        "settings": {
-            "number_of_shards": 1
-        },
-        "mappings": {
-            "doc": {
-                "properties": {
-                    "timestamp": {
-                        "type": "date",
-                        "format": "strict_date_hour_minute_second"
-                    },
-                    "ip": { "type": "text" },
-                    "rtt": { "type": "long" },
-                    "avgRtt": { "type": "long" },
-                },
-            }
-        }
-    }
     const summary = {
         "settings": {
             "number_of_shards": 1
@@ -152,7 +134,60 @@ initDatabases().then(dbs => {
             }
         }
     }
-
+    const risk = {
+        "settings": {
+            "number_of_shards": 1
+        },
+        "mappings": {
+            "doc": {
+                "properties": {
+                    "cpu_pct": {
+                        "type": "float"
+                    },
+                    "risk": {
+                        "type": "float"
+                    },
+                    "disk_pct": {
+                        "type": "float"
+                    },
+                    "unacloudDisk_pct": {
+                        "type": "float"
+                    },
+                    "ip": {
+                        "type": "text",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "ignore_above": 256
+                            }
+                        }
+                    },
+                    "ram_pct": {
+                        "type": "float"
+                    },
+                    "swap_pct": {
+                        "type": "float"
+                    },
+                    "timestamp": {
+                        "type": "date",
+                        "format": "strict_date_hour_minute_second"
+                    },
+                    "running_vms": {
+                        "type": "short"
+                    },
+                    "vms": {
+                        "type": "short"
+                    },
+                    "virtualbox_status": {
+                        "type": "short"
+                    },
+                    "unacloud_status": {
+                        "type": "short"
+                    },
+                }
+            }
+        }
+    }
     axios.put(elasticSearch + "/summary", summary).then(
         (res) => { console.log("Elastic summary: " + res.status); },
         (err) => {  }
@@ -167,6 +202,10 @@ initDatabases().then(dbs => {
     );
     axios.put(elasticSearch + "/network", rtt).then(
         (res) => { console.log("Elastic network: " + res.status); },
+        (err) => {  }
+    );
+    axios.put(elasticSearch + "/risk", risk).then(
+        (res) => { console.log("Elastic risk: " + res.status); },
         (err) => {  }
     );
     var collectionP = PerformanceDB.collection('ErrorsCollection');
@@ -209,6 +248,7 @@ app.get('/cpuPercentMachine/:ip', creator.cpuPercentMachine)
 app.get('/virtualBoxStatusMachine/:ip', creator.virtualBoxStatusMachine)
 app.get('/unacloudStatusMachine/:ip', creator.unacloudStatusMachine)
 app.get('/avgRTT', creator.avgRTT);
+app.get('/riskOfMachine/:ip', creator.riskOfMachine);
 
 app.post('/hardwareInfo', creator.hardwareInfo);
 app.post('/createMetric', creator.createMetric);
