@@ -1,6 +1,7 @@
 var axios = require('axios');
 var qs = require('qs');
 var email = require('./EmailNotification.js');
+let fuzzylogic = require('fuzzylogic');
 
 exports.hardwareInfo = function (req, res) {
     let newMetric = qs.parse(req.body);
