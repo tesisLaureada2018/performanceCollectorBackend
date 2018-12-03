@@ -298,6 +298,14 @@ function checkMachines() {
         else {
             alert("isOn. Machine is responding", ip, timestamp);
         }
+        timestamp = [
+            d.getFullYear(),
+            (d.getMonth() < 10 ? '0' + d.getMonth() : d.getMonth()) + 1,
+            (d.getDate() < 10 ? '0' + d.getDate() : d.getDate())].join('-')
+            + 'T' +
+            [(d.getHours() < 10 ? '0' + d.getHours() : d.getHours()),
+            (d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes()),
+            (d.getSeconds() < 10 ? '0' + d.getSeconds() : d.getSeconds())].join(':');
         const riskCalc = calculateRisk(machines[ip].lastMetric);
         if (riskCalc > 0.5){
             let riskObject = {
