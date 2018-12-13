@@ -343,7 +343,7 @@ function calculateRisk(machine) {
     if (machine.unacloud_status === 0 || machine.virtualBoxStatus === 0) {
         return 1;
     }
-    const diskRisk = fuzzylogic.trapezoid(machine.unacloudDisk.percent, 20, 90, 100, 101);
+    const diskRisk = fuzzylogic.trapezoid(machine.Unacloud_disk.percent, 20, 90, 100, 101);
     const cpuRisk = fuzzylogic.trapezoid(machine.cpu, 0, 90, 100, 101);
     const ramRisk = fuzzylogic.grade(machine.ram.percent, 0, 100) - 0.3;
 
